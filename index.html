@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sports Streams</title>
+  <style>
+    :root {
+      --primary-color: #ff3366;
+      --background: #121212;
+      --card-bg: #1e1e1e;
+      --text-light: #eee;
+      --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      --input-bg: #292929;
+      --input-border: #444;
+    }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--text-light);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px;
+    }
+
+    h1 {
+      color: var(--primary-color);
+      margin-bottom: 24px;
+      user-select: none;
+    }
+
+    input[type="search"] {
+      width: 100%;
+      max-width: 400px;
+      padding: 12px 16px;
+      border-radius: 30px;
+      border: 1.5px solid var(--input-border);
+      background: var(--input-bg);
+      color: var(--text-light);
+      font-size: 1rem;
+      outline-offset: 2px;
+      transition: border-color 0.3s ease;
+      user-select: text;
+    }
+
+    input[type="search"]:focus {
+      border-color: var(--primary-color);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 1200px;
+      margin-top: 32px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 20px rgba(255, 51, 102, 0.25);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      user-select: none;
+      transition: transform 0.15s ease;
+    }
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 10px 25px rgba(255, 51, 102, 0.4);
+    }
+
+    .match-info {
+      margin-bottom: 16px;
+    }
+
+    .match-info strong {
+      display: block;
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+      color: var(--primary-color);
+    }
+
+    .match-info span {
+      display: block;
+      font-size: 0.9rem;
+      color: #bbb;
+    }
+
+    label {
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: block;
+      color: var(--primary-color);
+    }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: #333;
+      color: var(--text-light);
+      font-size: 1rem;
+      margin-bottom: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    button {
+      background: var(--primary-color);
+      color: #121212;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 12px;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+
+    button:hover {
+      background: #e62e59;
+    }
+
+    .no-matches {
+      margin-top: 48px;
+      font-size: 1.3rem;
+      color: #888;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sports Streams</h1>
+  <input
+    type="search"
+    id="searchInput"
+    placeholder="Search sport, tournament or match..."
+    aria-label="Search sports streams"
+  />
+  <div class="grid" id="gamesGrid"></div>
+  <p class="no-matches" id="noMatches" style="display:none;">No matches found.</p>
+
+  <script>
+    async function fetchGames() {
+      try {
+        const res = await fetch('https://topembed.pw/api.php?format=json');
+        if (!res.ok) throw new Error('Network response not ok');
+        const data = await res.json();
+        return data.events || {};
+      } catch (err) {
+        console.error('Failed to fetch games:', err);
+        return {};
+      }
+    }
+
+    function formatUnixTimestamp(ts) {
+      const date = new Date(ts * 1000);
+      return date.toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
+    }
+
+    function createGameCard(game) {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const matchInfo = document.createElement('div');
+      matchInfo.className = 'match-info';
+
+      matchInfo.innerHTML = `
+        <strong>${game.match}</strong>
+        <span><strong>Sport:</strong> ${game.sport}</span>
+        <span><strong>Tournament:</strong> ${game.tournament}</span>
+        <span><strong>Time:</strong> ${formatUnixTimestamp(game.unix_timestamp)}</span>
+      `;
+
+      card.appendChild(matchInfo);
+
+      const label = document.createElement('label');
+      label.textContent = 'Choose Channel:';
+      label.htmlFor = 'channelSelect';
+      card.appendChild(label);
+
+      const select = document.createElement('select');
+      select.id = 'channelSelect';
+
+      game.channels.forEach((ch) => {
+        // Extract channel name for option text (after last slash)
+        const name = ch.split('/').pop();
+        const option = document.createElement('option');
+        option.value = ch;
+        option.textContent = decodeURIComponent(name);
+        select.appendChild(option);
+      });
+
+      card.appendChild(select);
+
+      const button = document.createElement('button');
+      button.textContent = 'Watch';
+      button.onclick = () => {
+        const encodedUrl = encodeURIComponent(select.value);
+        window.location.href = `watch.html?channel=${encodedUrl}`;
+      };
+      card.appendChild(button);
+
+      return card;
+    }
+
+    async function renderGames(filter = '') {
+      const events = await fetchGames();
+      const gamesGrid = document.getElementById('gamesGrid');
+      const noMatches = document.getElementById('noMatches');
+
+      // Flatten all events into one array
+      const allGames = Object.values(events).flat();
+
+      // Filter by search input (case insensitive)
+      const filteredGames = allGames.filter((game) => {
+        const searchStr = `${game.sport} ${game.tournament} ${game.match}`.toLowerCase();
+        return searchStr.includes(filter.toLowerCase());
+      });
+
+      gamesGrid.innerHTML = '';
+
+      if (filteredGames.length === 0) {
+        noMatches.style.display = 'block';
+        return;
+      } else {
+        noMatches.style.display = 'none';
+      }
+
+      filteredGames.forEach((game) => {
+        const card = createGameCard(game);
+        gamesGrid.appendChild(card);
+      });
+    }
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      renderGames(e.target.value.trim());
+    });
+
+    // Initial render
+    renderGames();
+  </script>
+</body>
+</html>
