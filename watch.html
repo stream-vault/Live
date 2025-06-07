@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Watch Stream</title>
+  <style>
+    :root {
+      --primary-color: #ff3366;
+      --background: #121212;
+      --text-light: #eee;
+      --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      background: var(--background);
+      font-family: var(--font-family);
+      color: var(--text-light);
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #1e1e1e;
+      padding: 16px 24px;
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--primary-color);
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(255, 51, 102, 0.4);
+    }
+
+    header a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 600;
+      border: 2px solid var(--primary-color);
+      padding: 6px 14px;
+      border-radius: 20px;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    header a:hover {
+      background-color: var(--primary-color);
+      color: #121212;
+    }
+
+    main {
+      flex-grow: 1;
+      background: black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    iframe {
+      width: 100%;
+      max-width: 1280px;
+      height: 720px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px var(--primary-color);
+    }
+
+    .error {
+      color: var(--primary-color);
+      font-size: 1.4rem;
+      text-align: center;
+      padding: 40px;
+      user-select: none;
+    }
+
+    @media (max-width: 768px) {
+      iframe {
+        height: 56.25vw; /* 16:9 aspect ratio */
+        max-width: 100%;
+        border-radius: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    Watch Stream
+    <a href="index.html" aria-label="Back to home">← Back</a>
+  </header>
+  <main id="main-content">
+    <p class="error">Loading stream...</p>
+  </main>
+
+  <script>
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
+    function isValidUrl(string) {
+      try {
+        const url = new URL(string);
+        // Basic validation for the domain - only allow topembed.pw embeds
+        return url.hostname.endsWith('topembed.pw');
+      } catch (_) {
+        return false;
+      }
+    }
+
+    const mainContent = document.getElementById('main-content');
+    const channelUrl = getQueryParam('channel');
+
+    if (!channelUrl) {
+      mainContent.innerHTML = '<p class="error">No channel specified.</p>';
+    } else {
+      const decodedUrl = decodeURIComponent(channelUrl);
+
+      if (!isValidUrl(decodedUrl)) {
+        mainContent.innerHTML = '<p class="error">Invalid or unsupported channel URL.</p>';
+      } else {
+        mainContent.innerHTML = `
+          <iframe
+            src="${decodedUrl}"
+            allow="encrypted-media"
+            width="100%"
+            height="720"
+            scrolling="no"
+            frameborder="0"
+            allowfullscreen
+            title="Live Stream"
+            loading="lazy"
+          ></iframe>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
